@@ -2,6 +2,22 @@
 
 A beautiful animated city scenery built with C++ and OpenGL/GLUT.
 
+![Project Screenshot](screenshot.png)
+
+---
+
+## 🚀 Algorithms Implemented
+
+This project demonstrates the manual implementation of fundamental computer graphics algorithms:
+
+1.  **DDA Line Drawing Algorithm**: Used for drawing dashed lane markings on the road.
+2.  **Bresenham's Line Drawing Algorithm**: Used for solid road lines and car wheel spokes.
+3.  **Midpoint Circle Drawing Algorithm**: Used for the Sun, Moon, Trees, Wheels, and Lamp glows.
+4.  **2D Transformations**:
+    - **Translation**: Car and cloud movement.
+    - **Rotation**: Animated spinning wheels.
+    - **Scaling**: Pulsing glow effect for the Sun and Moon.
+
 ---
 
 ## ✅ Requirements
