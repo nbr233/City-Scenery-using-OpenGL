@@ -3,8 +3,11 @@
 #include <GL/glut.h>
 #include <math.h>
 #include <stdlib.h>
-#include <time.h>
 #include <stdio.h>
+#include <algorithm>
+#include <iostream>
+
+using namespace std;
 
 // Window
 int W = 1200, H = 700;
@@ -41,13 +44,126 @@ void drawRect(float x1, float y1, float x2, float y2) {
     glEnd();
 }
 
-void drawCircle(float cx, float cy, float r, int segs) {
-    glBegin(GL_POLYGON);
-    for (int i = 0; i < segs; i++) {
-        float a = 2.0f * 3.14159f * i / segs;
-        glVertex2f(cx + r * cos(a), cy + r * sin(a));
+void drawPixel(float x, float y) {
+    glBegin(GL_POINTS);
+    glVertex2f(x, y);
+    glEnd();
+}
+
+// 1. DDA Line Drawing Algorithm (Case-based as per your teacher's rule)
+void ddaLine(float x1, float y1, float x2, float y2) {
+    float dx = x2 - x1;
+    float dy = y2 - y1;
+    float m;
+    
+    if (dx == 0) m = 1e6; // Vertical line case
+    else m = dy / dx;
+
+    // We use a small increment instead of 1.0 because our screen coordinates 
+    // in this project are between -1.0 and 1.0.
+    float step = 0.001f; 
+
+    glBegin(GL_POINTS);
+    // Case 1: 0 <= m <= 1
+    if (m >= 0 && m <= 1) {
+        if (x1 > x2) { swap(x1, x2); swap(y1, y2); }
+        while (x1 <= x2) {
+            glVertex2f(x1, y1);
+            x1 += step;
+            y1 += (m * step);
+        }
+    }
+    // Case 2: -1 <= m < 0
+    else if (m >= -1 && m < 0) {
+        if (x1 < x2) { swap(x1, x2); swap(y1, y2); }
+        while (x1 >= x2) {
+            glVertex2f(x1, y1);
+            x1 -= step;
+            y1 -= (m * step);
+        }
+    }
+    // Case 3: m > 1
+    else if (m > 1) {
+        if (y1 > y2) { swap(x1, x2); swap(y1, y2); }
+        while (y1 <= y2) {
+            glVertex2f(x1, y1);
+            y1 += step;
+            x1 += (step / m);
+        }
+    }
+    // Case 4: m < -1
+    else if (m < -1) {
+        if (y1 < y2) { swap(x1, x2); swap(y1, y2); }
+        while (y1 >= y2) {
+            glVertex2f(x1, y1);
+            y1 -= step;
+            x1 -= (step / m);
+        }
     }
     glEnd();
+}
+
+// 2. Bresenham's Line Drawing Algorithm
+void bresenhamLine(float x1, float y1, float x2, float y2) {
+    int ix1 = (int)(x1 * 1000), iy1 = (int)(y1 * 1000);
+    int ix2 = (int)(x2 * 1000), iy2 = (int)(y2 * 1000);
+    int dx = abs(ix2 - ix1), dy = abs(iy2 - iy1);
+    int sx = (ix1 < ix2) ? 1 : -1;
+    int sy = (iy1 < iy2) ? 1 : -1;
+    int err = dx - dy;
+    glBegin(GL_POINTS);
+    while (true) {
+        glVertex2f(ix1 / 1000.0f, iy1 / 1000.0f);
+        if (ix1 == ix2 && iy1 == iy2) break;
+        int e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; ix1 += sx; }
+        if (e2 < dx) { err += dx; iy1 += sy; }
+    }
+    glEnd();
+}
+
+// 3. Midpoint Circle Drawing Algorithm
+void drawCirclePoints(float cx, float cy, float x, float y) {
+    glVertex2f(cx + x, cy + y);
+    glVertex2f(cx - x, cy + y);
+    glVertex2f(cx + x, cy - y);
+    glVertex2f(cx - x, cy - y);
+    glVertex2f(cx + y, cy + x);
+    glVertex2f(cx - y, cy + x);
+    glVertex2f(cx + y, cy - x);
+    glVertex2f(cx - y, cy - x);
+}
+
+void midpointCircle(float cx, float cy, float r) {
+    int ir = (int)(r * 1000);
+    int x = 0, y = ir;
+    int d = 1 - ir;
+    glBegin(GL_POINTS);
+    drawCirclePoints(cx, cy, x / 1000.0f, y / 1000.0f);
+    while (y > x) {
+        if (d < 0) d += 2 * x + 3;
+        else { d += 2 * (x - y) + 5; y--; }
+        x++;
+        drawCirclePoints(cx, cy, x / 1000.0f, y / 1000.0f);
+    }
+    glEnd();
+}
+
+void midpointCircleFilled(float cx, float cy, float r) {
+    int ir = (int)(r * 1000);
+    int x = 0, y = ir;
+    int d = 1 - ir;
+    while (y >= x) {
+        glBegin(GL_LINES);
+        glVertex2f(cx - x / 1000.0f, cy + y / 1000.0f); glVertex2f(cx + x / 1000.0f, cy + y / 1000.0f);
+        glVertex2f(cx - x / 1000.0f, cy - y / 1000.0f); glVertex2f(cx + x / 1000.0f, cy - y / 1000.0f);
+        glVertex2f(cx - y / 1000.0f, cy + x / 1000.0f); glVertex2f(cx + y / 1000.0f, cy + x / 1000.0f);
+        glVertex2f(cx - y / 1000.0f, cy - x / 1000.0f); glVertex2f(cx + y / 1000.0f, cy - x / 1000.0f);
+        glEnd();
+        if (d < 0) d += 2 * x + 3;
+        else { d += 2 * (x - y) + 5; y--; }
+        x++;
+    }
 }
 
 void drawSky() {
@@ -87,42 +203,60 @@ void drawMoon() {
     if (!nightMode) {
         // Sun
         float glow = 0.05f + moonGlow * 0.05f;
+        glPushMatrix();
+        glTranslatef(0.75f, 0.82f, 0.0f);
+        // 4. 2D Transformation: Scaling
+        glScalef(1.0f + glow, 1.0f + glow, 1.0f);
         setColor(1.0f, 0.95f, 0.5f + glow);
-        drawCircle(0.75f, 0.82f, 0.075f + glow * 0.5f, 40);
+        midpointCircleFilled(0, 0, 0.075f);
         setColor(1.0f, 0.98f, 0.8f);
-        drawCircle(0.75f, 0.82f, 0.065f, 40);
+        midpointCircleFilled(0, 0, 0.065f);
+        glPopMatrix();
         return;
     }
     // Glow halo
     float glow = moonGlow;
     setColor(0.15f + glow * 0.3f, 0.15f + glow * 0.3f, 0.25f + glow * 0.3f);
-    drawCircle(-0.75f, 0.80f, 0.09f + glow * 0.02f, 40);
+    midpointCircleFilled(-0.75f, 0.80f, 0.09f + glow * 0.02f);
     // Moon body
     setColor(0.95f, 0.95f, 0.80f);
-    drawCircle(-0.75f, 0.80f, 0.07f, 40);
+    midpointCircleFilled(-0.75f, 0.80f, 0.07f);
     // Crescent shadow
     setColor(0.05f, 0.05f, 0.15f);
-    drawCircle(-0.72f, 0.80f, 0.055f, 40);
+    midpointCircleFilled(-0.72f, 0.80f, 0.055f);
     // Craters
     setColor(0.80f, 0.80f, 0.65f);
-    drawCircle(-0.78f, 0.77f, 0.012f, 20);
-    drawCircle(-0.80f, 0.83f, 0.008f, 20);
+    midpointCircleFilled(-0.78f, 0.77f, 0.012f);
+    midpointCircleFilled(-0.80f, 0.83f, 0.008f);
 }
 
 void drawCloud(float ox, float oy, float scale, float alpha) {
+    glPushMatrix();
+    // 4. 2D Transformation: Translation
+    glTranslatef(ox, oy, 0);
+    glScalef(scale, scale, 1);
+
     if (nightMode)
         glColor4f(0.25f, 0.25f, 0.35f, alpha);
     else
         glColor4f(0.95f, 0.95f, 1.0f, alpha);
+    
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    drawCircle(ox,        oy,        0.06f * scale, 30);
-    drawCircle(ox+0.07f*scale, oy+0.02f*scale, 0.07f * scale, 30);
-    drawCircle(ox+0.14f*scale, oy,        0.055f * scale, 30);
-    drawCircle(ox+0.21f*scale, oy+0.01f*scale, 0.065f * scale, 30);
-    drawCircle(ox+0.28f*scale, oy,        0.05f * scale, 30);
-    drawRect(ox - 0.01f*scale, oy - 0.04f*scale, ox + 0.33f*scale, oy + 0.02f*scale);
+    
+    midpointCircleFilled(0, 0, 0.06f);
+    midpointCircleFilled(0.07f, 0.02f, 0.07f);
+    midpointCircleFilled(0.14f, 0, 0.055f);
+    midpointCircleFilled(0.21f, 0.01f, 0.065f);
+    midpointCircleFilled(0.28f, 0, 0.05f);
+    // Rect still using standard GL_QUADS for efficiency, but lines can use DDA/Bres
+    glBegin(GL_QUADS);
+    glVertex2f(-0.01f, -0.04f); glVertex2f(0.33f, -0.04f);
+    glVertex2f(0.33f, 0.02f); glVertex2f(-0.01f, 0.02f);
+    glEnd();
+    
     glDisable(GL_BLEND);
+    glPopMatrix();
 }
 
 void drawClouds() {
@@ -213,15 +347,17 @@ void drawGround() {
     drawRect(-1.0f, -0.35f, 1.0f, -0.33f);
     // Lane markings
     setColor(0.85f, 0.82f, 0.20f);
-    // Center dashed line
+    // Center dashed line using DDA
     for (int i = -10; i < 11; i++) {
         float lx = i * 0.18f;
-        drawRect(lx, -0.205f, lx + 0.1f, -0.195f);
+        // 1. DDA Line usage
+        ddaLine(lx, -0.2f, lx + 0.1f, -0.2f);
     }
-    // Solid white lines
+    // Solid white lines using Bresenham
     setColor(0.9f, 0.9f, 0.9f);
-    drawRect(-1.0f, -0.14f, 1.0f, -0.135f);
-    drawRect(-1.0f, -0.265f, 1.0f, -0.26f);
+    // 2. Bresenham's Line usage
+    bresenhamLine(-1.0f, -0.137f, 1.0f, -0.137f);
+    bresenhamLine(-1.0f, -0.262f, 1.0f, -0.262f);
 
     // Foreground ground
     setColor(0.12f, 0.14f, 0.10f);
@@ -235,14 +371,14 @@ void drawTree(float x, float y) {
     // Trunk
     setColor(0.35f, 0.22f, 0.10f);
     drawRect(x - 0.012f, y, x + 0.012f, y + 0.08f);
-    // Foliage layers
+    // Foliage layers using Midpoint Circle
     setColor(0.10f, 0.45f, 0.15f);
-    drawCircle(x, y + 0.12f, 0.05f, 20);
+    midpointCircleFilled(x, y + 0.12f, 0.05f);
     setColor(0.12f, 0.55f, 0.18f);
-    drawCircle(x, y + 0.09f, 0.04f, 20);
+    midpointCircleFilled(x, y + 0.09f, 0.04f);
     setColor(0.08f, 0.38f, 0.12f);
-    drawCircle(x - 0.02f, y + 0.10f, 0.035f, 20);
-    drawCircle(x + 0.02f, y + 0.10f, 0.035f, 20);
+    midpointCircleFilled(x - 0.02f, y + 0.10f, 0.035f);
+    midpointCircleFilled(x + 0.02f, y + 0.10f, 0.035f);
 }
 
 void drawStreetLight(float x) {
@@ -257,7 +393,7 @@ void drawStreetLight(float x) {
     // Light glow
     if (nightMode) {
         setColor(1.0f, 0.95f, 0.6f);
-        drawCircle(x + 0.04f, -0.093f, 0.012f, 20);
+        midpointCircleFilled(x + 0.04f, -0.093f, 0.012f);
         // Cone of light
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -270,7 +406,7 @@ void drawStreetLight(float x) {
         glDisable(GL_BLEND);
     } else {
         setColor(0.9f, 0.9f, 0.7f);
-        drawCircle(x + 0.04f, -0.093f, 0.010f, 20);
+        midpointCircleFilled(x + 0.04f, -0.093f, 0.010f);
     }
 }
 
@@ -293,60 +429,87 @@ void drawStreetLights() {
 }
 
 void drawCar(float x, float y, float r, float g, float b, bool facingRight) {
-    float d = facingRight ? 1.0f : -1.0f;
+    glPushMatrix();
+    // 4. 2D Transformation: Translation
+    glTranslatef(x, y, 0);
+    
     // Body
     setColor(r, g, b);
-    drawRect(x - 0.09f, y, x + 0.09f, y + 0.035f);
+    drawRect(-0.09f, 0, 0.09f, 0.035f);
     // Roof
     setColor(r * 0.8f, g * 0.8f, b * 0.8f);
-    drawRect(x - 0.055f, y + 0.035f, x + 0.055f, y + 0.062f);
+    drawRect(-0.055f, 0.035f, 0.055f, 0.062f);
     // Windows
     setColor(0.5f, 0.75f, 0.95f);
-    drawRect(x - 0.048f, y + 0.038f, x - 0.008f, y + 0.058f);
-    drawRect(x + 0.008f, y + 0.038f, x + 0.048f, y + 0.058f);
-    // Wheels
+    drawRect(-0.048f, 0.038f, -0.008f, 0.058f);
+    drawRect(0.008f, 0.038f, 0.048f, 0.058f);
+    
+    // Wheels using Midpoint Circle and Rotation
     setColor(0.15f, 0.15f, 0.15f);
-    drawCircle(x - 0.055f, y, 0.020f, 16);
-    drawCircle(x + 0.055f, y, 0.020f, 16);
+    midpointCircleFilled(-0.055f, 0, 0.020f);
+    midpointCircleFilled(0.055f, 0, 0.020f);
+    
     setColor(0.55f, 0.55f, 0.55f);
-    drawCircle(x - 0.055f, y, 0.011f, 16);
-    drawCircle(x + 0.055f, y, 0.011f, 16);
+    // 4. 2D Transformation: Rotation (Animated wheels)
+    static float wheelRot = 0;
+    wheelRot -= (facingRight ? 10.0f : -10.0f);
+    
+    glPushMatrix();
+    glTranslatef(-0.055f, 0, 0);
+    glRotatef(wheelRot, 0, 0, 1);
+    midpointCircleFilled(0, 0, 0.011f);
+    // spokes using Bresenham
+    setColor(0.3f, 0.3f, 0.3f);
+    bresenhamLine(-0.01f, 0, 0.01f, 0);
+    bresenhamLine(0, -0.01f, 0, 0.01f);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0.055f, 0, 0);
+    glRotatef(wheelRot, 0, 0, 1);
+    setColor(0.55f, 0.55f, 0.55f);
+    midpointCircleFilled(0, 0, 0.011f);
+    // spokes using Bresenham
+    setColor(0.3f, 0.3f, 0.3f);
+    bresenhamLine(-0.01f, 0, 0.01f, 0);
+    bresenhamLine(0, -0.01f, 0, 0.01f);
+    glPopMatrix();
+
     // Headlights / Taillights
     if (facingRight) {
-        // headlights
         if (nightMode) {
             setColor(1.0f, 1.0f, 0.8f);
-            drawRect(x + 0.085f, y + 0.012f, x + 0.092f, y + 0.022f);
+            drawRect(0.085f, 0.012f, 0.092f, 0.022f);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glColor4f(1.0f, 1.0f, 0.6f, 0.15f);
             glBegin(GL_TRIANGLES);
-            glVertex2f(x + 0.09f, y + 0.017f);
-            glVertex2f(x + 0.35f, y);
-            glVertex2f(x + 0.35f, y + 0.04f);
+            glVertex2f(0.09f, 0.017f);
+            glVertex2f(0.35f, -0.017f);
+            glVertex2f(0.35f, 0.04f);
             glEnd();
             glDisable(GL_BLEND);
         }
-        // Taillights
         setColor(0.9f, 0.1f, 0.1f);
-        drawRect(x - 0.092f, y + 0.012f, x - 0.085f, y + 0.022f);
+        drawRect(-0.092f, 0.012f, -0.085f, 0.022f);
     } else {
         if (nightMode) {
             setColor(1.0f, 1.0f, 0.8f);
-            drawRect(x - 0.092f, y + 0.012f, x - 0.085f, y + 0.022f);
+            drawRect(-0.092f, 0.012f, -0.085f, 0.022f);
             glEnable(GL_BLEND);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             glColor4f(1.0f, 1.0f, 0.6f, 0.15f);
             glBegin(GL_TRIANGLES);
-            glVertex2f(x - 0.09f, y + 0.017f);
-            glVertex2f(x - 0.35f, y);
-            glVertex2f(x - 0.35f, y + 0.04f);
+            glVertex2f(-0.09f, 0.017f);
+            glVertex2f(-0.35f, -0.017f);
+            glVertex2f(-0.35f, 0.04f);
             glEnd();
             glDisable(GL_BLEND);
         }
         setColor(0.9f, 0.1f, 0.1f);
-        drawRect(x + 0.085f, y + 0.012f, x + 0.092f, y + 0.022f);
+        drawRect(0.085f, 0.012f, 0.092f, 0.022f);
     }
+    glPopMatrix();
 }
 
 void drawCars() {
