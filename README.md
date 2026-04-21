@@ -2,7 +2,11 @@
 
 A beautiful animated city scenery built with C++ and OpenGL/GLUT.
 
-![Project Screenshot](screenshot.png)
+### ☀️ Day Mode
+![Day Mode](Screenshotday.png)
+
+### 🌙 Night Mode
+![Night Mode](Screenshotnight.png)
 
 ---
 
