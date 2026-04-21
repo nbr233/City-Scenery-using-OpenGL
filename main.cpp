@@ -3,11 +3,7 @@
 #include <GL/glut.h>
 #include <math.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <algorithm>
-#include <iostream>
-
-using namespace std;
 
 // Window
 int W = 1200, H = 700;
@@ -66,7 +62,7 @@ void ddaLine(float x1, float y1, float x2, float y2) {
     glBegin(GL_POINTS);
     // Case 1: 0 <= m <= 1
     if (m >= 0 && m <= 1) {
-        if (x1 > x2) { swap(x1, x2); swap(y1, y2); }
+        if (x1 > x2) { std::swap(x1, x2); std::swap(y1, y2); }
         while (x1 <= x2) {
             glVertex2f(x1, y1);
             x1 += step;
@@ -75,7 +71,7 @@ void ddaLine(float x1, float y1, float x2, float y2) {
     }
     // Case 2: -1 <= m < 0
     else if (m >= -1 && m < 0) {
-        if (x1 < x2) { swap(x1, x2); swap(y1, y2); }
+        if (x1 < x2) { std::swap(x1, x2); std::swap(y1, y2); }
         while (x1 >= x2) {
             glVertex2f(x1, y1);
             x1 -= step;
@@ -84,7 +80,7 @@ void ddaLine(float x1, float y1, float x2, float y2) {
     }
     // Case 3: m > 1
     else if (m > 1) {
-        if (y1 > y2) { swap(x1, x2); swap(y1, y2); }
+        if (y1 > y2) { std::swap(x1, x2); std::swap(y1, y2); }
         while (y1 <= y2) {
             glVertex2f(x1, y1);
             y1 += step;
@@ -93,7 +89,7 @@ void ddaLine(float x1, float y1, float x2, float y2) {
     }
     // Case 4: m < -1
     else if (m < -1) {
-        if (y1 < y2) { swap(x1, x2); swap(y1, y2); }
+        if (y1 < y2) { std::swap(x1, x2); std::swap(y1, y2); }
         while (y1 >= y2) {
             glVertex2f(x1, y1);
             y1 -= step;
